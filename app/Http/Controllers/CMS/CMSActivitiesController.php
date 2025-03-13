@@ -4,13 +4,16 @@ namespace App\Http\Controllers\CMS;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
 use App\Models\activities;
 
 class CMSActivitiesController extends Controller
 {
+    
     public function index() 
     {
-        $act = DB::table('activities')->select('*')->get();
+        $act = activities::all();
         return response()->json(data: $act);
     }
 

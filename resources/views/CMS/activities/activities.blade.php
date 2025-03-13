@@ -155,6 +155,8 @@
             <li><a href="/CMS/projects/">Projects</a></li>
             <li><a href="/CMS/traditional_room/">Traditional Room</a></li>
             <li><a href="/CMS/annual/">Annual List</a></li>
+            <li><button id="logoutBtn" class="logoutbutton">Logout</button>
+            </li>
         </ul>
     </div>
 
@@ -191,7 +193,7 @@
     </div>
 </body>
 
-<script>    
+<script>
     var baseurl = "{{ config('app.url') }}";
 
     $.ajaxSetup({
@@ -200,25 +202,33 @@
         }
     });
 
-    function fetchActivities() { //data table
+    function fetchActivities() {
         $.ajax({
-            url: "{{ route('get.activities') }}",
+            url: `${baseurl}/api/activities`,
             type: "GET",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+            },
             success: function(data) {
                 let tableBody = $("#activityTableBody").empty();
                 data.forEach(activity => {
+                    let imageUrl = activity.actImg || 'default-image.png';
                     tableBody.append(`
-                        <tr id="row-${activity.actID}">
-                            <td>${activity.actID}</td>
-                            <td><a href="/CMS/activities/${activity.actID}">${activity.actName}</a></td>
-                            <td><img src="${activity.actImg}" width="50"></td>
-                            <td>
-                                <button type="button" class="edit" onclick="editActivity(${activity.actID})">Edit</button>
-                                <button type="button" class="delete" onclick="deleteActivity(${activity.actID})">Delete</button>
-                            </td>
-                        </tr>
-                    `);
+                    <tr id="row-${activity.actID}">
+                        <td>${activity.actID}</td>
+                        <td><a href="/CMS/activities/${activity.actID}">${activity.actName}</a></td>
+                        <td><img src="${imageUrl}" width="50"></td>
+                        <td>
+                            <button type="button" class="edit" onclick="editActivity(${activity.actID})">Edit</button>
+                            <button type="button" class="delete" onclick="deleteActivity(${activity.actID})">Delete</button>
+                        </td>
+                    </tr>
+                `);
                 });
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching activities:", error);
+                alert("Failed to load activities. Please try again.");
             }
         });
     }
@@ -226,20 +236,26 @@
     function deleteActivity(actID) {
         if (!confirm("Are you sure?")) return;
         $.ajax({
-            url: `${baseurl}/delete/activities/${actID}`,
+            url: `${baseurl}/api/delete/activities/${actID}`,
             type: "DELETE",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+            },
             success: function() {
                 $(`#row-${actID}`).remove();
                 alert("Activity deleted successfully!");
             }
-        
+
         });
     }
 
     function editActivity(actID) {
         $.ajax({
-            url: `${baseurl}/find/activities/${actID}`,
+            url: `${baseurl}/api/find/activities/${actID}`,
             type: "GET",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+            },
             success: function(activity) {
                 $("#modalTitle").text("Edit Activity");
                 $("#actID").val(activity.actID);
@@ -247,7 +263,7 @@
                 $("#actImg").val(activity.actImg);
                 $("#activityModal").show();
             }
-        
+
         });
     }
 
@@ -267,13 +283,16 @@
     $("#activityForm").submit(function(event) {
         event.preventDefault();
         let actID = $("#actID").val();
-        let url = actID ? `${baseurl}/put/activities/${actID}` :
+        let url = actID ? `${baseurl}/api/put/activities/${actID}` :
             "{{ route('post') }}";
         let method = actID ? "PUT" : "POST";
 
         $.ajax({
                 url,
                 type: method,
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+                },
                 data: {
                     actName: $("#actName").val(),
                     actImg: $("#actImg").val()
@@ -286,4 +305,27 @@
     });
 
     fetchActivities();
+    $(document).ready(function() {
+        $("#logoutBtn").click(function() {
+            logout();
+        });
+    });
+
+    function logout() {
+        if (!confirm("Wanna get out??")) return;
+        $.ajax({
+            url: `${baseurl}/api/logout`,
+            type: "POST",
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+            },
+            success: function(response) {
+                localStorage.removeItem("authToken");
+                window.location.href = "{{ route('loginform') }}";
+            },
+            error: function(xhr) {
+                alert("Logout failed: " + xhr.responseText);
+            }
+        });
+    }
 </script>
